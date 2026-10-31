@@ -75,10 +75,11 @@ chown -R v15:v15 $SPA
 
 ## 3. Release an APK
 
-Prerequisites once per machine: JDK 17, Android SDK, and per customer a keystore.
+Prerequisites once per machine: JDK 21 to 25, Android SDK platform 36, Node 22+,
+and per customer a keystore. Android Studio's bundled JDK works.
 
 ```bash
-export JAVA_HOME=/opt/homebrew/opt/openjdk@17
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 
 cp customers/.env.example customers/.env.<client>   # fill in id, title, colours, site

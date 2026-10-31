@@ -7,8 +7,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.1'
-        classpath 'com.google.gms:google-services:4.4.0'
+        classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'com.google.gms:google-services:4.4.4'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -24,6 +24,21 @@ allprojects {
     }
 }
 
+// Capacitor's Kotlin plugins (camera, filesystem, geolocation) pin a Java 21
+// toolchain. Compile them with the JDK running Gradle, keeping Java 21 bytecode.
+subprojects { sub ->
+    sub.afterEvaluate {
+        def kotlinExt = sub.extensions.findByName('kotlin')
+        if (kotlinExt != null) {
+            kotlinExt.jvmToolchain(JavaVersion.current().majorVersion as int)
+            sub.tasks.matching { it.class.name.contains('KotlinCompile') }.configureEach { task ->
+                def jvmTarget = task.class.classLoader.loadClass('org.jetbrains.kotlin.gradle.dsl.JvmTarget')
+                task.compilerOptions.jvmTarget.set(Enum.valueOf(jvmTarget, 'JVM_21'))
+            }
+        }
+    }
+}
+
 task clean(type: Delete) {
-    delete rootProject.buildDir
+    delete rootProject.layout.buildDirectory
 }
