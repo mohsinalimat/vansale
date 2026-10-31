@@ -153,7 +153,7 @@ def collect_doctypes() -> list:
 def collect_hooks() -> dict:
     tree = ast.parse((APP / "hooks.py").read_text())
     wanted = (
-        "doc_events", "after_migrate", "fixtures", "website_redirects",
+        "required_apps", "doc_events", "after_install", "after_migrate", "fixtures", "website_redirects",
         "website_route_rules", "boot_session", "after_request",
         "scheduler_events", "override_doctype_class", "role_home_page",
     )
@@ -322,7 +322,7 @@ def write_hooks(hooks: dict) -> None:
                     lines.append(f"| {dt} | `{event}` | `{h}` |")
         lines.append("")
 
-    for key in ("after_migrate", "after_request", "boot_session", "role_home_page"):
+    for key in ("required_apps", "after_install", "after_migrate", "after_request", "boot_session", "role_home_page"):
         if key in hooks:
             val = hooks[key]
             lines += [f"## `{key}`", ""]

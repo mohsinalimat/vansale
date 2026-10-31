@@ -6,9 +6,9 @@
 Every `@frappe.whitelist()` function is a **public HTTP endpoint** reachable at
 `/api/method/<dotted.path>`. This file is the complete list.
 
-- **67 endpoints**
+- **75 endpoints**
 - **5 reachable without login** (`allow_guest=True`)
-- **47 with no in-body permission call** - see the note below
+- **55 with no in-body permission call** - see the note below
 
 ## Guest-reachable endpoints
 
@@ -39,6 +39,8 @@ anything here that writes, or reads another user's data, needs an explicit
 | `vansale.api.auth.ping` | - |
 | `vansale.api.auth.setup_pin` | pin: str |
 | `vansale.api.customer.detail` | name: str |
+| `vansale.api.customer.list_mine` | limit: int = 50, search: Optional[str] = None |
+| `vansale.api.customer.save_contact` | customer: str, mobile_no: str | None = None, email_id: str | None = None |
 | `vansale.api.customer.statement_html` | name: str, from_date: str | None = None, to_date: str | None = None |
 | `vansale.api.customer.statement_json` | name: str, from_date: str | None = None, to_date: str | None = None |
 | `vansale.api.customer.statement_pdf` | name: str, from_date: str | None = None, to_date: str | None = None |
@@ -49,7 +51,7 @@ anything here that writes, or reads another user's data, needs an explicit
 | `vansale.api.dashboard.today_sales` | - |
 | `vansale.api.dashboard.warehouses` | company: Optional[str] = None |
 | `vansale.api.invoice.detail` | name: str |
-| `vansale.api.invoice.list_mine` | limit: int = 50, customer: Optional[str] = None, is_return: Optional[int] = None |
+| `vansale.api.invoice.list_mine` | limit: int = 50, customer: Optional[str] = None, is_return: Optional[int] = None, returnable: int = 0, search: Optional[str] = None |
 | `vansale.api.invoice.tax_info` | customer: Optional[str] = None, posting_date: Optional[str] = None |
 | `vansale.api.item.detail` | item_code: str, customer: Optional[str] = None |
 | `vansale.api.item.list_mine` | limit: int = 100, search: Optional[str] = None, warehouse: Optional[str] = None, only_in_stock: int = 0 |
@@ -57,8 +59,11 @@ anything here that writes, or reads another user's data, needs an explicit
 | `vansale.api.item.stock_balance` | warehouse: str, limit: int = 500 |
 | `vansale.api.me.config_defaults` | - |
 | `vansale.api.payment.detail` | name: str |
+| `vansale.api.payment.list_mine` | limit: int = 50, customer: Optional[str] = None, search: Optional[str] = None |
 | `vansale.api.payment.modes_of_payment` | - |
 | `vansale.api.payment.outstanding` | customer: str |
+| `vansale.api.printing.get_html` | doctype: str, name: str, format: str | None = None, no_letterhead: int = 0 |
+| `vansale.api.printing.pdf` | doctype: str, name: str, format: str | None = None, copies: int = 1, no_letterhead: int = 0 |
 | `vansale.api.route.bulk_assign_sales_person` | sales_person: Optional[str] = None, user: Optional[str] = None, customers: list | str | None = None, percentage: float = 100 |
 | `vansale.api.route.bulk_set_visit_days` | customers: list | str | None = None, days: list | str | None = None |
 | `vansale.api.route.bulk_unassign_sales_person` | sales_person: Optional[str] = None, user: Optional[str] = None, customers: list | str | None = None |
@@ -77,6 +82,9 @@ anything here that writes, or reads another user's data, needs an explicit
 | `vansale.api.route.today` | client_date: Optional[str] = None |
 | `vansale.api.route.van_user_query` | doctype: str = 'User', txt: str = '', searchfield: str = 'name', start: int = 0, page_len: int = 20, filters: dict | None = None |
 | `vansale.api.sales_return.list_mine` | limit: int = 50 |
+| `vansale.api.sales_return.preview` | items: list[dict[str, Any]], original_invoice: Optional[str] = None, customer: Optional[str] = None |
+| `vansale.api.sales_return.reference_options` | customer: str, items: Optional[str] = None |
+| `vansale.api.sales_return.refund` | client_id: str, credit_note: str, mode_of_payment: str, amount: Optional[float] = None, reference_no: Optional[str] = None, posting_ts: Optional[str] = None |
 | `vansale.api.van_stock.list_stock` | warehouse: Optional[str] = None, limit: int = 500 |
 | `vansale.api.van_stock.my_warehouse` | - |
 
@@ -119,7 +127,7 @@ Change the logged-in user's PIN. Does NOT rotate api_secret.
 (old_pin: str, new_pin: str)
 ```
 
-<sub>vansale/api/auth.py:186</sub>
+<sub>vansale/api/auth.py:226</sub>
 
 #### `login` - **GUEST** / POST
 
@@ -130,7 +138,7 @@ Cookie-based login for the web PWA (also used for initial PIN setup).
 (usr: str, pwd: str)
 ```
 
-<sub>vansale/api/auth.py:65</sub>
+<sub>vansale/api/auth.py:99</sub>
 
 #### `login_with_pin` - **GUEST** / POST
 
@@ -141,7 +149,7 @@ PIN unlock for the native APK.
 (email: str, pin: str)
 ```
 
-<sub>vansale/api/auth.py:145</sub>
+<sub>vansale/api/auth.py:181</sub>
 
 #### `logout` - POST / _no perm call_
 
@@ -152,7 +160,7 @@ Explicit logout — clears the session cookie. Token auth on the APK is cleared 
 (no arguments)
 ```
 
-<sub>vansale/api/auth.py:295</sub>
+<sub>vansale/api/auth.py:339</sub>
 
 #### `ping` - _no perm call_
 
@@ -163,7 +171,7 @@ Liveness probe used by the client to verify a cached token still works.
 (no arguments)
 ```
 
-<sub>vansale/api/auth.py:285</sub>
+<sub>vansale/api/auth.py:329</sub>
 
 #### `reset_pin` - POST
 
@@ -174,7 +182,7 @@ Admin PIN reset — clears the target user's PIN so they set a new one.
 (user: str)
 ```
 
-<sub>vansale/api/auth.py:236</sub>
+<sub>vansale/api/auth.py:279</sub>
 
 #### `setup_pin` - POST / _no perm call_
 
@@ -185,7 +193,7 @@ Set or replace the logged-in user's PIN.
 (pin: str)
 ```
 
-<sub>vansale/api/auth.py:101</sub>
+<sub>vansale/api/auth.py:136</sub>
 
 #### `site_info` - **GUEST** / GET
 
@@ -196,7 +204,7 @@ Pre-login connectivity probe for the APK's site-URL setup screen.
 (no arguments)
 ```
 
-<sub>vansale/api/auth.py:269</sub>
+<sub>vansale/api/auth.py:313</sub>
 
 
 ### `vansale.api.customer`
@@ -207,10 +215,10 @@ Create a Customer + optional primary Address.
 
 ```
 /api/method/vansale.api.customer.create
-(customer_name: str, mobile_no: str | None = None, territory: str | None = None, tax_id: str | None = None, customer_group: str | None = None, customer_type: str | None = None, email_id: str | None = None, address_line1: str | None = None, address_line2: str | None = None, city: str | None = None, state: str | None = None, pincode: str | None = None, country: str | None = None, building_number: str | None = None, additional_number: str | None = None, district: str | None = None, client_id: str | None = None, posting_ts: str | None = None)
+(customer_name: str, mobile_no: str | None = None, territory: str | None = None, tax_id: str | None = None, customer_group: str | None = None, customer_type: str | None = None, email_id: str | None = None, address_line1: str | None = None, address_line2: str | None = None, city: str | None = None, state: str | None = None, pincode: str | None = None, country: str | None = None, building_number: str | None = None, additional_number: str | None = None, district: str | None = None, client_id: str | None = None, posting_ts: str | None = None, cr_number: str | None = None, customer_name_2: str | None = None)
 ```
 
-<sub>vansale/api/customer.py:187</sub>
+<sub>vansale/api/customer.py:432</sub>
 
 #### `detail` - GET / _no perm call_
 
@@ -219,16 +227,38 @@ Create a Customer + optional primary Address.
 (name: str)
 ```
 
-<sub>vansale/api/customer.py:144</sub>
+<sub>vansale/api/customer.py:381</sub>
 
-#### `list_mine` - GET
+#### `list_mine` - GET / _no perm call_
 
 ```
 /api/method/vansale.api.customer.list_mine
 (limit: int = 50, search: Optional[str] = None)
 ```
 
-<sub>vansale/api/customer.py:97</sub>
+<sub>vansale/api/customer.py:222</sub>
+
+#### `save_address` - POST
+
+Edit a customer's address, or add one when `address` is empty.
+
+```
+/api/method/vansale.api.customer.save_address
+(customer: str, address: str | None = None, address_line1: str | None = None, address_line2: str | None = None, city: str | None = None, state: str | None = None, pincode: str | None = None, country: str | None = None, building_number: str | None = None, additional_number: str | None = None, district: str | None = None, phone: str | None = None)
+```
+
+<sub>vansale/api/customer.py:275</sub>
+
+#### `save_contact` - POST / _no perm call_
+
+Set the customer's mobile / email.
+
+```
+/api/method/vansale.api.customer.save_contact
+(customer: str, mobile_no: str | None = None, email_id: str | None = None)
+```
+
+<sub>vansale/api/customer.py:334</sub>
 
 #### `statement_html` - GET / _no perm call_
 
@@ -239,7 +269,7 @@ Render a printable customer statement as HTML (direct-download variant).
 (name: str, from_date: str | None = None, to_date: str | None = None)
 ```
 
-<sub>vansale/api/customer.py:499</sub>
+<sub>vansale/api/customer.py:984</sub>
 
 #### `statement_json` - GET / _no perm call_
 
@@ -250,7 +280,7 @@ JSON-wrapped statement HTML for the Capacitor APK.
 (name: str, from_date: str | None = None, to_date: str | None = None)
 ```
 
-<sub>vansale/api/customer.py:515</sub>
+<sub>vansale/api/customer.py:1000</sub>
 
 #### `statement_pdf` - GET / _no perm call_
 
@@ -261,7 +291,7 @@ Render the customer statement as a PDF binary.
 (name: str, from_date: str | None = None, to_date: str | None = None)
 ```
 
-<sub>vansale/api/customer.py:532</sub>
+<sub>vansale/api/customer.py:1017</sub>
 
 #### `summary` - GET / _no perm call_
 
@@ -272,7 +302,7 @@ Aggregates for the customer detail tile strip.
 (customer: str)
 ```
 
-<sub>vansale/api/customer.py:551</sub>
+<sub>vansale/api/customer.py:1036</sub>
 
 
 ### `vansale.api.dashboard`
@@ -286,7 +316,7 @@ Aggregate for the current or previous months (``offset=0`` is current).
 (offset: int = 0)
 ```
 
-<sub>vansale/api/dashboard.py:69</sub>
+<sub>vansale/api/dashboard.py:81</sub>
 
 #### `recent_activity` - GET / _no perm call_
 
@@ -297,7 +327,7 @@ Last N sales invoices + payments for the current user.
 (limit: int = 10)
 ```
 
-<sub>vansale/api/dashboard.py:110</sub>
+<sub>vansale/api/dashboard.py:122</sub>
 
 #### `today_collection` - GET / _no perm call_
 
@@ -306,7 +336,7 @@ Last N sales invoices + payments for the current user.
 (no arguments)
 ```
 
-<sub>vansale/api/dashboard.py:47</sub>
+<sub>vansale/api/dashboard.py:48</sub>
 
 #### `today_sales` - GET / _no perm call_
 
@@ -315,7 +345,7 @@ Last N sales invoices + payments for the current user.
 (no arguments)
 ```
 
-<sub>vansale/api/dashboard.py:14</sub>
+<sub>vansale/api/dashboard.py:15</sub>
 
 #### `warehouses` - GET / _no perm call_
 
@@ -326,7 +356,7 @@ List stock warehouses. If the user has a Vansale Configuration (and therefore Us
 (company: Optional[str] = None)
 ```
 
-<sub>vansale/api/dashboard.py:136</sub>
+<sub>vansale/api/dashboard.py:152</sub>
 
 
 ### `vansale.api.file_upload`
@@ -352,7 +382,7 @@ Save a base64-encoded blob as a Frappe File and return its URL.
 (name: str)
 ```
 
-<sub>vansale/api/invoice.py:692</sub>
+<sub>vansale/api/invoice.py:812</sub>
 
 #### `list_mine` - GET / _no perm call_
 
@@ -360,10 +390,10 @@ List the current user's Sales Invoices.
 
 ```
 /api/method/vansale.api.invoice.list_mine
-(limit: int = 50, customer: Optional[str] = None, is_return: Optional[int] = None)
+(limit: int = 50, customer: Optional[str] = None, is_return: Optional[int] = None, returnable: int = 0, search: Optional[str] = None)
 ```
 
-<sub>vansale/api/invoice.py:648</sub>
+<sub>vansale/api/invoice.py:750</sub>
 
 #### `return_against` - POST
 
@@ -371,19 +401,19 @@ Create a Sales Return (Credit Note) against an existing submitted invoice.
 
 ```
 /api/method/vansale.api.invoice.return_against
-(client_id: str, original_name: str, items: list[dict[str, Any]], posting_ts: Optional[str] = None, remarks: Optional[str] = None, reason: Optional[str] = None, note: Optional[str] = None, submit: int = 1)
+(client_id: str, original_name: str, items: list[dict[str, Any]], posting_ts: Optional[str] = None, remarks: Optional[str] = None, reason: Optional[str] = None, note: Optional[str] = None, submit: int = 1, refund: Optional[dict] = None)
 ```
 
-<sub>vansale/api/invoice.py:522</sub>
+<sub>vansale/api/invoice.py:673</sub>
 
 #### `save` - POST
 
 ```
 /api/method/vansale.api.invoice.save
-(client_id: str, customer: str, items: list[dict[str, Any]], posting_ts: Optional[str] = None, warehouse: Optional[str] = None, remarks: Optional[str] = None, update_stock: int = 1, submit: int = 1, payment_type: Optional[str] = None, mode_of_payment: Optional[str] = None, discount_amount: Optional[float] = None, apply_discount_on: Optional[str] = None)
+(client_id: str, customer: str, items: list[dict[str, Any]], posting_ts: Optional[str] = None, warehouse: Optional[str] = None, remarks: Optional[str] = None, update_stock: int = 1, submit: int = 1, payment_type: Optional[str] = None, mode_of_payment: Optional[str] = None, discount_amount: Optional[float] = None, apply_discount_on: Optional[str] = None, payments: Optional[list[dict[str, Any]]] = None)
 ```
 
-<sub>vansale/api/invoice.py:190</sub>
+<sub>vansale/api/invoice.py:199</sub>
 
 #### `submit_draft` - POST
 
@@ -394,7 +424,7 @@ Submit an existing draft Sales Invoice, loading it from the database.
 (name: str, mode_of_payment: Optional[str] = None)
 ```
 
-<sub>vansale/api/invoice.py:464</sub>
+<sub>vansale/api/invoice.py:611</sub>
 
 #### `tax_info` - GET / _no perm call_
 
@@ -405,7 +435,7 @@ Tax template + headline rate for the invoice form's live totals.
 (customer: Optional[str] = None, posting_date: Optional[str] = None)
 ```
 
-<sub>vansale/api/invoice.py:104</sub>
+<sub>vansale/api/invoice.py:123</sub>
 
 #### `update_draft` - POST
 
@@ -413,10 +443,10 @@ In-place update a draft Sales Invoice.
 
 ```
 /api/method/vansale.api.invoice.update_draft
-(name: str, items: list[dict[str, Any]], remarks: Optional[str] = None, discount_amount: Optional[float] = None, apply_discount_on: Optional[str] = None, submit: int = 0, payment_type: Optional[str] = None, mode_of_payment: Optional[str] = None, warehouse: Optional[str] = None)
+(name: str, items: list[dict[str, Any]], remarks: Optional[str] = None, discount_amount: Optional[float] = None, apply_discount_on: Optional[str] = None, submit: int = 0, payment_type: Optional[str] = None, mode_of_payment: Optional[str] = None, warehouse: Optional[str] = None, payments: Optional[list[dict[str, Any]]] = None)
 ```
 
-<sub>vansale/api/invoice.py:346</sub>
+<sub>vansale/api/invoice.py:507</sub>
 
 
 ### `vansale.api.item`
@@ -428,7 +458,7 @@ In-place update a draft Sales Invoice.
 (item_code: str, customer: Optional[str] = None)
 ```
 
-<sub>vansale/api/item.py:172</sub>
+<sub>vansale/api/item.py:296</sub>
 
 #### `list_mine` - GET / _no perm call_
 
@@ -439,7 +469,7 @@ Search items by code / name / barcode.
 (limit: int = 100, search: Optional[str] = None, warehouse: Optional[str] = None, only_in_stock: int = 0)
 ```
 
-<sub>vansale/api/item.py:27</sub>
+<sub>vansale/api/item.py:62</sub>
 
 #### `price_for` - GET / _no perm call_
 
@@ -450,7 +480,7 @@ Light-weight price lookup used when the user changes UOM on a line.
 (item_code: str, customer: Optional[str] = None, uom: Optional[str] = None)
 ```
 
-<sub>vansale/api/item.py:212</sub>
+<sub>vansale/api/item.py:331</sub>
 
 #### `stock_balance` - GET / _no perm call_
 
@@ -459,7 +489,7 @@ Light-weight price lookup used when the user changes UOM on a line.
 (warehouse: str, limit: int = 500)
 ```
 
-<sub>vansale/api/item.py:230</sub>
+<sub>vansale/api/item.py:350</sub>
 
 
 ### `vansale.api.me`
@@ -484,7 +514,7 @@ For Van Managers: list all Vansale Configurations (admin picker).
 (no arguments)
 ```
 
-<sub>vansale/api/me.py:238</sub>
+<sub>vansale/api/me.py:475</sub>
 
 
 ### `vansale.api.payment`
@@ -498,7 +528,7 @@ Delete a Payment Entry — drafts only.
 (name: str)
 ```
 
-<sub>vansale/api/payment.py:276</sub>
+<sub>vansale/api/payment.py:423</sub>
 
 #### `detail` - GET / _no perm call_
 
@@ -509,29 +539,29 @@ Return a Payment Entry with expanded references (invoices covered).
 (name: str)
 ```
 
-<sub>vansale/api/payment.py:325</sub>
+<sub>vansale/api/payment.py:482</sub>
 
-#### `list_mine` - GET
+#### `list_mine` - GET / _no perm call_
 
 Payment Entries visible to this user.
 
 ```
 /api/method/vansale.api.payment.list_mine
-(limit: int = 50, customer: Optional[str] = None)
+(limit: int = 50, customer: Optional[str] = None, search: Optional[str] = None)
 ```
 
-<sub>vansale/api/payment.py:242</sub>
+<sub>vansale/api/payment.py:382</sub>
 
 #### `modes_of_payment` - GET / _no perm call_
 
-Active Modes of Payment for the dropdown. Filters out disabled rows.
+Enabled Modes of Payment that have an account for the user's company.
 
 ```
 /api/method/vansale.api.payment.modes_of_payment
 (no arguments)
 ```
 
-<sub>vansale/api/payment.py:371</sub>
+<sub>vansale/api/payment.py:528</sub>
 
 #### `outstanding` - GET / _no perm call_
 
@@ -542,18 +572,41 @@ Return submitted, unpaid Sales Invoices for a customer.
 (customer: str)
 ```
 
-<sub>vansale/api/payment.py:299</sub>
+<sub>vansale/api/payment.py:449</sub>
 
 #### `save` - POST
 
-Allocation rules (PDF §2d): - `invoice_names` list provided → allocate FIFO across the picked invoices in the given order - `invoice_name` single provided → allocate against that invoice only - neither provided → FIFO auto-allocate across ALL outstanding invoices for the customer, oldest first; any leftover remains unallocated (customer credit)
+Allocation rules (PDF §2d): - `advance` (setting "Allow advance payment") → no allocation at all; the whole amount stays as the customer's advance / credit - `invoice_names` list provided → allocate FIFO across the picked invoices in the given order - `invoice_name` single provided → allocate against that invoice only - neither provided → FIFO auto-allocate across ALL outstanding invoices for the customer, oldest first; any leftover remains unallocated (customer credit)
 
 ```
 /api/method/vansale.api.payment.save
-(client_id: str, customer: str, paid_amount: float, mode_of_payment: str = 'Cash', reference_no: Optional[str] = None, reference_date: Optional[str] = None, invoice_name: Optional[str] = None, invoice_names: Optional[list[str]] = None, posting_ts: Optional[str] = None, remarks: Optional[str] = None, submit: int = 1)
+(client_id: str, customer: str, paid_amount: float, mode_of_payment: str = 'Cash', reference_no: Optional[str] = None, reference_date: Optional[str] = None, invoice_name: Optional[str] = None, invoice_names: Optional[list[str]] = None, posting_ts: Optional[str] = None, remarks: Optional[str] = None, submit: int = 1, advance: int = 0)
 ```
 
-<sub>vansale/api/payment.py:77</sub>
+<sub>vansale/api/payment.py:232</sub>
+
+
+### `vansale.api.printing`
+
+#### `get_html` - GET / _no perm call_
+
+Body + styles of the print format, with what /printview adds around them.
+
+```
+/api/method/vansale.api.printing.get_html
+(doctype: str, name: str, format: str | None = None, no_letterhead: int = 0)
+```
+
+<sub>vansale/api/printing.py:32</sub>
+
+#### `pdf` - GET / _no perm call_
+
+```
+/api/method/vansale.api.printing.pdf
+(doctype: str, name: str, format: str | None = None, copies: int = 1, no_letterhead: int = 0)
+```
+
+<sub>vansale/api/printing.py:54</sub>
 
 
 ### `vansale.api.route`
@@ -567,7 +620,7 @@ Append Sales Team row on multiple customers — idempotent.
 (sales_person: Optional[str] = None, user: Optional[str] = None, customers: list | str | None = None, percentage: float = 100)
 ```
 
-<sub>vansale/api/route.py:797</sub>
+<sub>vansale/api/route.py:804</sub>
 
 #### `bulk_set_visit_days` - POST / _no perm call_
 
@@ -578,7 +631,7 @@ Write `custom_visit_days` on many customers in one call.
 (customers: list | str | None = None, days: list | str | None = None)
 ```
 
-<sub>vansale/api/route.py:767</sub>
+<sub>vansale/api/route.py:774</sub>
 
 #### `bulk_unassign_sales_person` - POST / _no perm call_
 
@@ -589,7 +642,7 @@ Remove Sales Team row for `sales_person` from multiple customers.
 (sales_person: Optional[str] = None, user: Optional[str] = None, customers: list | str | None = None)
 ```
 
-<sub>vansale/api/route.py:855</sub>
+<sub>vansale/api/route.py:862</sub>
 
 #### `customer_query` - _no perm call_
 
@@ -600,7 +653,7 @@ Search-as-you-type customer picker filtered by sales_person.
 (doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict | None = None)
 ```
 
-<sub>vansale/api/route.py:443</sub>
+<sub>vansale/api/route.py:448</sub>
 
 #### `customer_summary` - _no perm call_
 
@@ -611,7 +664,7 @@ Name + phone for a single customer — manager-gated, used by the assignment pag
 (customer: str)
 ```
 
-<sub>vansale/api/route.py:781</sub>
+<sub>vansale/api/route.py:788</sub>
 
 #### `daily_report` - GET / _no perm call_
 
@@ -622,7 +675,7 @@ Aggregate today's visits for the logged-in driver.
 (client_date: Optional[str] = None, plan_date: Optional[str] = None)
 ```
 
-<sub>vansale/api/route.py:378</sub>
+<sub>vansale/api/route.py:383</sub>
 
 #### `driver_roster_overview` - _no perm call_
 
@@ -633,7 +686,7 @@ Flat list for the Van Driver Roster viewer: every Vansale user × their customer
 (no arguments)
 ```
 
-<sub>vansale/api/route.py:672</sub>
+<sub>vansale/api/route.py:679</sub>
 
 #### `end_visit` - POST / _no perm call_
 
@@ -644,7 +697,7 @@ Close a visit. Idempotent by `client_id` via Van Visit Log.
 (client_id: str, customer: str, client_date: Optional[str] = None, invoice: Optional[str] = None, payment: Optional[str] = None, signature_file: Optional[str] = None, lat: Optional[float] = None, lng: Optional[float] = None, notes: Optional[str] = None, posting_ts: Optional[str] = None)
 ```
 
-<sub>vansale/api/route.py:275</sub>
+<sub>vansale/api/route.py:280</sub>
 
 #### `list_assigned_customers` - _no perm call_
 
@@ -655,7 +708,7 @@ Customers currently tagged to `sales_person`.
 (sales_person: str)
 ```
 
-<sub>vansale/api/route.py:714</sub>
+<sub>vansale/api/route.py:721</sub>
 
 #### `list_available_customers` - _no perm call_
 
@@ -666,7 +719,7 @@ Pool of customers for the right-side picker.
 (sales_person: str, include_assigned: int = 0, search: str | None = None, limit: int = 0)
 ```
 
-<sub>vansale/api/route.py:563</sub>
+<sub>vansale/api/route.py:570</sub>
 
 #### `list_customers_for_user` - GET
 
@@ -677,7 +730,7 @@ Return every customer currently assigned to `user`'s Sales Person.
 (user: Optional[str] = None)
 ```
 
-<sub>vansale/api/route.py:512</sub>
+<sub>vansale/api/route.py:519</sub>
 
 #### `reassign_customer_sales_person` - POST / _no perm call_
 
@@ -688,7 +741,7 @@ Atomically move a customer from their current sales_person(s) to a new one. Stri
 (customer: str, sales_person: str, percentage: float = 100)
 ```
 
-<sub>vansale/api/route.py:638</sub>
+<sub>vansale/api/route.py:645</sub>
 
 #### `resolve_user_sales_person` - _no perm call_
 
@@ -699,7 +752,7 @@ Resolve a driver's Sales Person without exposing the `Vansale Configuration User
 (user: str)
 ```
 
-<sub>vansale/api/route.py:702</sub>
+<sub>vansale/api/route.py:709</sub>
 
 #### `set_customer_visit_days` - POST / _no perm call_
 
@@ -710,7 +763,7 @@ Write `custom_visit_days` on a single Customer.
 (customer: str, days: list | str | None = None)
 ```
 
-<sub>vansale/api/route.py:755</sub>
+<sub>vansale/api/route.py:762</sub>
 
 #### `skip_visit` - POST / _no perm call_
 
@@ -721,7 +774,7 @@ Mark a visit as skipped. Idempotent — skipping twice is a no-op.
 (customer: str, reason: Optional[str] = None, client_date: Optional[str] = None)
 ```
 
-<sub>vansale/api/route.py:341</sub>
+<sub>vansale/api/route.py:346</sub>
 
 #### `start_visit` - POST / _no perm call_
 
@@ -732,7 +785,7 @@ Mark a visit as in-progress. Upserts the Van Daily Visit row.
 (customer: str, client_date: Optional[str] = None)
 ```
 
-<sub>vansale/api/route.py:256</sub>
+<sub>vansale/api/route.py:261</sub>
 
 #### `today` - GET / _no perm call_
 
@@ -743,7 +796,7 @@ Return the driver's customer list for today.
 (client_date: Optional[str] = None)
 ```
 
-<sub>vansale/api/route.py:213</sub>
+<sub>vansale/api/route.py:218</sub>
 
 #### `van_user_query` - _no perm call_
 
@@ -754,7 +807,7 @@ Link-field query: return only Users that appear in Vansale Configuration User ro
 (doctype: str = 'User', txt: str = '', searchfield: str = 'name', start: int = 0, page_len: int = 20, filters: dict | None = None)
 ```
 
-<sub>vansale/api/route.py:531</sub>
+<sub>vansale/api/route.py:538</sub>
 
 
 ### `vansale.api.sales_return`
@@ -766,16 +819,60 @@ Link-field query: return only Users that appear in Vansale Configuration User ro
 (limit: int = 50)
 ```
 
-<sub>vansale/api/sales_return.py:170</sub>
+<sub>vansale/api/sales_return.py:690</sub>
+
+#### `preview` - POST / _no perm call_
+
+Totals of a return before saving it — net, VAT and total as ERPNext will post them (the document is built and calculated, never saved).
+
+```
+/api/method/vansale.api.sales_return.preview
+(items: list[dict[str, Any]], original_invoice: Optional[str] = None, customer: Optional[str] = None)
+```
+
+<sub>vansale/api/sales_return.py:655</sub>
+
+#### `reference_options` - GET / _no perm call_
+
+For the bulk-return screen: whether ZATCA references apply, the default references for the chosen items, items never sold to the customer, and the customer's recent invoices to pick from.
+
+```
+/api/method/vansale.api.sales_return.reference_options
+(customer: str, items: Optional[str] = None)
+```
+
+<sub>vansale/api/sales_return.py:633</sub>
+
+#### `refund` - POST / _no perm call_
+
+Pay out a credit note later — a return kept as customer credit at the time. Same Payment Entry as "Refund now" on the return screens.
+
+```
+/api/method/vansale.api.sales_return.refund
+(client_id: str, credit_note: str, mode_of_payment: str, amount: Optional[float] = None, reference_no: Optional[str] = None, posting_ts: Optional[str] = None)
+```
+
+<sub>vansale/api/sales_return.py:344</sub>
 
 #### `save` - POST
 
 ```
 /api/method/vansale.api.sales_return.save
-(client_id: str, original_invoice: str, items: list[dict[str, Any]], reason: Optional[str] = None, note: Optional[str] = None, posting_ts: Optional[str] = None, submit: int = 1)
+(client_id: str, original_invoice: str, items: list[dict[str, Any]], reason: Optional[str] = None, note: Optional[str] = None, posting_ts: Optional[str] = None, submit: int = 1, refund: Optional[dict] = None)
 ```
 
-<sub>vansale/api/sales_return.py:76</sub>
+<sub>vansale/api/sales_return.py:386</sub>
+
+#### `save_without_invoice` - POST
+
+Bulk return: credit note for returned goods without one original invoice, when the "Return without invoice" setting allows it. See `build_bulk_return` for pricing, warehouse and ZATCA references.
+
+```
+/api/method/vansale.api.sales_return.save_without_invoice
+(client_id: str, customer: str, items: list[dict[str, Any]], reason: Optional[str] = None, note: Optional[str] = None, posting_ts: Optional[str] = None, submit: int = 1, references: Optional[list[str]] = None, refund: Optional[dict] = None)
+```
+
+<sub>vansale/api/sales_return.py:572</sub>
 
 
 ### `vansale.api.util`
@@ -812,7 +909,7 @@ Lightweight "is the SPA still compatible with this server?" probe.
 (warehouse: Optional[str] = None, limit: int = 500)
 ```
 
-<sub>vansale/api/van_stock.py:93</sub>
+<sub>vansale/api/van_stock.py:77</sub>
 
 #### `my_warehouse` - GET / _no perm call_
 
@@ -821,7 +918,7 @@ Lightweight "is the SPA still compatible with this server?" probe.
 (no arguments)
 ```
 
-<sub>vansale/api/van_stock.py:87</sub>
+<sub>vansale/api/van_stock.py:71</sub>
 
 #### `transfer_in` - POST
 
@@ -832,5 +929,5 @@ Create a Material Transfer Stock Entry from ``from_warehouse`` to the user's van
 (from_warehouse: str, items: list[dict], to_warehouse: Optional[str] = None, reason: Optional[str] = None, client_id: Optional[str] = None, posting_ts: Optional[str] = None)
 ```
 
-<sub>vansale/api/van_stock.py:117</sub>
+<sub>vansale/api/van_stock.py:105</sub>
 

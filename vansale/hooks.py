@@ -5,10 +5,19 @@ app_description = "Van Sales PWA — offline-first Vue 3 SPA + Capacitor APK"
 app_email = "ramees@enfono.com"
 app_license = "mit"
 
-# Hooks that run on migrate.
+# Provisioning touches ERPNext doctypes (Customer custom fields, for one).
+required_apps = ["erpnext"]
+
+# Hooks that run on install and migrate. `install-app` does not run
+# after_migrate, so without after_install a new site has no custom fields,
+# roles or CORS origins until its first migrate.
 # - ensure_capacitor_cors is idempotent and critical for APK login.
-# - setup.after_migrate installs the Van User role + its DocPerms and
-#   re-applies User Permissions for all Vansale Configuration rows.
+# - setup.after_migrate installs the Van User role + its DocPerms, the custom
+#   fields, and re-applies User Permissions for all Vansale Configuration rows.
+after_install = [
+    "vansale.install.ensure_capacitor_cors",
+    "vansale.setup.after_migrate",
+]
 after_migrate = [
     "vansale.install.ensure_capacitor_cors",
     "vansale.setup.after_migrate",

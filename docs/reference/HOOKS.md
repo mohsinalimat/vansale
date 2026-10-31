@@ -24,6 +24,15 @@ unexpectedly.
 | Stock Entry | `before_insert` | `vansale.van_series.set_naming_series_from_van` |
 | Stock Entry | `before_validate` | `vansale.van_defaults.override_cost_center_from_van` |
 
+## `required_apps`
+
+- `erpnext`
+
+## `after_install`
+
+- `vansale.install.ensure_capacitor_cors`
+- `vansale.setup.after_migrate`
+
 ## `after_migrate`
 
 - `vansale.install.ensure_capacitor_cors`
@@ -56,17 +65,13 @@ Exported with `bench export-fixtures`, re-imported on every `bench migrate`.
 ]
 ```
 
-## `website_redirects`
+## `website_route_rules`
 
 ```json
 [
   {
-    "source": "/vansale",
-    "target": "/assets/vansale/spa/index.html"
-  },
-  {
-    "source": "/vansale/",
-    "target": "/assets/vansale/spa/index.html"
+    "from_route": "/vansale/<path:app_path>",
+    "to_route": "vansale"
   }
 ]
 ```
